@@ -6,5 +6,15 @@ namespace DataCollectorSpotify
 {
     public class Track
     {
+        public string Album { get; }
+        public string Artist { get; }
+        public string Title { get; }
+
+        public Track(string title, string album, string artist)
+        {
+            Album = album;
+            Title = title;
+            Artist = artist;
+        }
     }
 }
