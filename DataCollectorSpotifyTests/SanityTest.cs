@@ -3,6 +3,7 @@ using Xunit;
 
 namespace DataCollectorSpotifyTests
 {
+    // [UnitOfWork_StateUnderTest_ExpectedBehavior]
     public class SanityTest
     {
         [Fact]
