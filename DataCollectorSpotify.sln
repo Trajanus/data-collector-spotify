@@ -5,7 +5,7 @@ VisualStudioVersion = 16.0.30104.148
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DataCollectorSpotify", "DataCollectorSpotify\DataCollectorSpotify.csproj", "{48BEDEE4-80EA-4F07-84C9-DA6BF6A8BC27}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataCollectorSpotifyTests", "DataCollectorSpotifyTests\DataCollectorSpotifyTests.csproj", "{41D3F9A3-6010-443B-A5E2-9921A7ACA21F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DataCollectorSpotifyTests", "DataCollectorSpotifyTests\DataCollectorSpotifyTests.csproj", "{41D3F9A3-6010-443B-A5E2-9921A7ACA21F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
