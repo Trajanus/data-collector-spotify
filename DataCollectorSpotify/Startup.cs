@@ -7,17 +7,25 @@ using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Serilog;
 using System.Linq;
 using Microsoft.AspNetCore.Builder;
+using Autofac;
+using Serilog.Events;
+using Serilog.Core;
+using System.Reflection;
+using Autofac.Core;
 
 namespace DataCollectorSpotify
 {
     public class Startup
     {
+        const string SettingsFileName = "appsettings.json";
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
         }
 
         public IConfiguration Configuration { get; }
+        public ILifetimeScope AutofacContainer { get; private set; }
 
         public void ConfigureServices(IServiceCollection services)
         {
@@ -34,6 +42,17 @@ namespace DataCollectorSpotify
 
         }
 
+        // runs after ConfigureServices
+        public void ConfigureContainer(ContainerBuilder builder)
+        {
+            DataCollectorSpotifyOptions options = ReadConfiguration(SettingsFileName);
+
+            ConfigSerilog(options.SerilogLogEventLevel, options.LogDirectoryPath);
+
+            builder.RegisterType<Collector>().AsSelf().SingleInstance().WithParameter("clientId", options.SpotifyDataCollectorClientId);
+            builder.RegisterInstance(options);
+        }
+
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
@@ -41,7 +60,8 @@ namespace DataCollectorSpotify
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseHttpsRedirection();
+            //TODO
+            //app.UseHttpsRedirection();
 
             app.UseRouting();
 
@@ -51,6 +71,30 @@ namespace DataCollectorSpotify
             {
                 endpoints.MapControllers();
             });
+        }
+
+        private static void ConfigSerilog(LogEventLevel logLevel, string logDirectoryPath)
+        {
+            var levelSwitch = new LoggingLevelSwitch();
+            levelSwitch.MinimumLevel = logLevel;
+
+            Log.Logger = new LoggerConfiguration()
+                .WriteTo.File(logDirectoryPath, rollingInterval: RollingInterval.Day)
+                .WriteTo.Console()
+                .MinimumLevel.ControlledBy(levelSwitch)
+                .CreateLogger();
+
+            Log.Information($"Logger for {Assembly.GetEntryAssembly().GetName().Name} started.");
+        }
+
+        private static DataCollectorSpotifyOptions ReadConfiguration(string settingsFileName)
+        {
+            IConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
+            configurationBuilder.AddJsonFile(settingsFileName);
+            IConfiguration configuration = configurationBuilder.Build();
+            var options = new DataCollectorSpotifyOptions();
+            configuration.Bind(options);
+            return options;
         }
     }
 }

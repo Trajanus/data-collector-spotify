@@ -1,4 +1,6 @@
 ﻿using Serilog.Events;
+using System;
+using System.IO;
 
 namespace DataCollectorSpotify
 {
@@ -6,5 +8,8 @@ namespace DataCollectorSpotify
     {
         public LogEventLevel SerilogLogEventLevel { get; set; }
         public string LogDirectoryPath { get; set; }
+        public Uri SpotifyAuthCallbackUri { get; set; }
+        public string SpotifyDataCollectorClientId { get; set; }
+        public string BrowserPath { get; set; }
     }
 }
