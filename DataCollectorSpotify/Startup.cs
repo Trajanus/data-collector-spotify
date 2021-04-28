@@ -12,6 +12,8 @@ using Serilog.Events;
 using Serilog.Core;
 using System.Reflection;
 using Autofac.Core;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http;
 
 namespace DataCollectorSpotify
 {
@@ -55,10 +57,17 @@ namespace DataCollectorSpotify
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            if (env.IsDevelopment())
+            app.UseExceptionHandler(c => c.Run(async context =>
             {
-                app.UseDeveloperExceptionPage();
-            }
+                var exception = context.Features
+                    .Get<IExceptionHandlerPathFeature>()
+                    .Error;
+
+                Log.Error(exception, "Unhandled exception.");
+
+                var response = new { error = exception.Message };
+                await context.Response.WriteAsync(exception.Message);
+            }));
 
             //TODO
             //app.UseHttpsRedirection();
