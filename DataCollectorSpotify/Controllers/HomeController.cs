@@ -1,7 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using PlaylistsNET.Models;
 using Serilog;
 using SpotifyAPI.Web;
+using Swan;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace DataCollectorSpotify.Controllers
@@ -29,8 +33,45 @@ namespace DataCollectorSpotify.Controllers
             );
 
             var spotify = new SpotifyClient(initialResponse.AccessToken);
-            var track = await spotify.Tracks.Get("1s6ux0lNiTziSrd7iUAADH");
-            Log.Information(track.Name);
+
+            var currentUser = await spotify.UserProfile.Current();
+            var userPlaylists = await spotify.Playlists.GetUsers(currentUser.Id);
+
+            List<FullPlaylist> userFullPlaylists = new List<FullPlaylist>(userPlaylists.Items.Count);
+
+            foreach (var item in userPlaylists.Items)
+            {
+                userFullPlaylists.Add(await spotify.Playlists.Get(item.Id));
+                await Task.Delay(500);
+            }
+
+            List<M3uPlaylist> playlists = new List<M3uPlaylist>(userPlaylists.Items.Count);
+
+            foreach(var userFullPlaylist in userFullPlaylists)
+            {
+                M3uPlaylist playlist = new M3uPlaylist
+                {
+                    FileName = userFullPlaylist.Name,
+                    IsExtended = true
+                };
+
+                foreach (var track in userFullPlaylist.Tracks.Items)
+                {
+                    FullTrack fullTrack = (FullTrack)track.Track;
+                    var playlistEntry = new M3uPlaylistEntry
+                    {
+                        Album = fullTrack.Album.Name,
+                        AlbumArtist = fullTrack.Artists.Select(artist => artist.Name).Aggregate((i, j) => i + ", " + j).TrimEnd().Trim(','),
+                        Duration = new TimeSpan(0, 0, 0, 0, fullTrack.DurationMs),
+                        Title = fullTrack.Name
+                    };
+
+                    playlist.PlaylistEntries.Add(playlistEntry);
+                }
+
+                playlists.Add(playlist);
+            }
+            
             return StatusCode(200);
         }
     }
