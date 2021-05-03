@@ -7,6 +7,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Newtonsoft;
+using Newtonsoft.Json;
+using System.IO;
 
 namespace DataCollectorSpotify.Controllers
 {
@@ -70,6 +73,13 @@ namespace DataCollectorSpotify.Controllers
                 }
 
                 playlists.Add(playlist);
+            }
+
+            foreach(var playlist in playlists)
+            {
+                string filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), playlist.FileName);
+                System.IO.File.WriteAllText(filePath
+                    , JsonConvert.SerializeObject(playlist));
             }
             
             return StatusCode(200);
