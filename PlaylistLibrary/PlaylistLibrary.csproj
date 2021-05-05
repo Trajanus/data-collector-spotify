@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="PlaylistsNET" Version="1.1.3" />
+    <PackageReference Include="SpotifyAPI.Web" Version="6.2.0" />
+  </ItemGroup>
+
+</Project>

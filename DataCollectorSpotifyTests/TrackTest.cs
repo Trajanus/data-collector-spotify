@@ -1,4 +1,5 @@
-﻿using DataCollectorSpotify;
+﻿using PlaylistLibrary;
+using System;
 using Xunit;
 
 namespace DataCollectorSpotifyTests
@@ -11,7 +12,8 @@ namespace DataCollectorSpotifyTests
             string title = "test-title";
             string album = "test-album";
             string artist = "test-artist";
-            Track track = new Track(title, album, artist);
+            TimeSpan duration = new TimeSpan(0, 0, 0, 0, 100000);
+            Track track = new Track(title, album, artist, duration);
 
             Assert.True(null != track);
 
@@ -23,6 +25,9 @@ namespace DataCollectorSpotifyTests
 
             Assert.True(!string.IsNullOrWhiteSpace(track.Artist));
             Assert.True(track.Artist == artist);
+
+            Assert.True(null != track.Duration);
+            Assert.True(track.Duration.TotalMilliseconds == duration.TotalMilliseconds);
         }
     }
 }

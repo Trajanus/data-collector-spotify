@@ -1,16 +1,16 @@
 ﻿using Autofac;
 using Autofac.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
-using Serilog;
-using Serilog.Core;
-using Serilog.Events;
+using Newtonsoft.Json;
+using PlaylistLibrary;
+using PlaylistsNET.Models;
+using SpotifyAPI.Web;
 using System;
-using System.Reflection;
-using System.Threading;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace DataCollectorSpotify
@@ -31,6 +31,56 @@ namespace DataCollectorSpotify
             System.Diagnostics.Process.Start(options.BrowserPath, loginRequestUri + " --new-window");
 
             return 0;
+        }
+
+        public static async void AuthenticatedHandler(object sender, AuthenticationEventArgs e)
+        {
+            var spotify = new SpotifyClient(e.AccessToken);
+
+            var currentUser = await spotify.UserProfile.Current();
+            var userPlaylists = await spotify.Playlists.GetUsers(currentUser.Id);
+
+            List<FullPlaylist> userFullPlaylists = new List<FullPlaylist>(userPlaylists.Items.Count);
+
+            foreach (var item in userPlaylists.Items)
+            {
+                userFullPlaylists.Add(await spotify.Playlists.Get(item.Id));
+                await Task.Delay(500);
+            }
+
+            List<M3uPlaylist> playlists = new List<M3uPlaylist>(userPlaylists.Items.Count);
+
+            foreach (var userFullPlaylist in userFullPlaylists)
+            {
+                M3uPlaylist playlist = new M3uPlaylist
+                {
+                    FileName = userFullPlaylist.Name,
+                    IsExtended = true
+                };
+
+                foreach (var track in userFullPlaylist.Tracks.Items)
+                {
+                    FullTrack fullTrack = (FullTrack)track.Track;
+                    var playlistEntry = Track.SpotifyTrackToM3uPlaylistEntry(fullTrack);
+
+                    playlist.PlaylistEntries.Add(playlistEntry);
+                }
+
+                playlists.Add(playlist);
+            }
+
+            string directoryPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), nameof(DataCollectorSpotify));
+            if (!Directory.Exists(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+
+            foreach (var playlist in playlists)
+            {
+                string playlistFileName = Path.GetInvalidFileNameChars().Aggregate(playlist.FileName, (current, c) => current.Replace(c.ToString(), string.Empty)); 
+                string filePath = Path.Combine(directoryPath, playlistFileName);
+                File.WriteAllText(filePath, JsonConvert.SerializeObject(playlist));
+            }
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
