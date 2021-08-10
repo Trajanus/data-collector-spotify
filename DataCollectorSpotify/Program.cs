@@ -36,7 +36,32 @@ namespace DataCollectorSpotify
         public static async void AuthenticatedHandler(object sender, AuthenticationEventArgs e)
         {
             var spotify = new SpotifyClient(e.AccessToken);
+            var playlists = await GetUserPlaylists(spotify);
 
+            string directoryPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), nameof(DataCollectorSpotify));
+            if (!Directory.Exists(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+
+            foreach (var playlist in playlists)
+            {
+                string playlistFileName = Path.GetInvalidFileNameChars().Aggregate(playlist.FileName, (current, c) => current.Replace(c.ToString(), string.Empty)); 
+                string filePath = Path.Combine(directoryPath, playlistFileName);
+                File.WriteAllText(filePath, JsonConvert.SerializeObject(playlist));
+            }
+        }
+
+        public static IHostBuilder CreateHostBuilder(string[] args) =>
+            Host.CreateDefaultBuilder(args)
+                .UseServiceProviderFactory(new AutofacServiceProviderFactory())
+                .ConfigureWebHostDefaults(webBuilder =>
+                {
+                    webBuilder.UseStartup<Startup>();
+                });
+
+        private static async Task<List<M3uPlaylist>> GetUserPlaylists(SpotifyClient spotify)
+        {
             var currentUser = await spotify.UserProfile.Current();
             var userPlaylists = await spotify.Playlists.GetUsers(currentUser.Id);
 
@@ -69,26 +94,7 @@ namespace DataCollectorSpotify
                 playlists.Add(playlist);
             }
 
-            string directoryPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), nameof(DataCollectorSpotify));
-            if (!Directory.Exists(directoryPath))
-            {
-                Directory.CreateDirectory(directoryPath);
-            }
-
-            foreach (var playlist in playlists)
-            {
-                string playlistFileName = Path.GetInvalidFileNameChars().Aggregate(playlist.FileName, (current, c) => current.Replace(c.ToString(), string.Empty)); 
-                string filePath = Path.Combine(directoryPath, playlistFileName);
-                File.WriteAllText(filePath, JsonConvert.SerializeObject(playlist));
-            }
+            return playlists;
         }
-
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .UseServiceProviderFactory(new AutofacServiceProviderFactory())
-                .ConfigureWebHostDefaults(webBuilder =>
-                {
-                    webBuilder.UseStartup<Startup>();
-                });
     }
 }
