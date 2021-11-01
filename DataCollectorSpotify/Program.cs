@@ -1,5 +1,4 @@
-﻿using Autofac;
-using Autofac.Extensions.DependencyInjection;
+﻿using Autofac.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -9,6 +8,7 @@ using PlaylistsNET.Models;
 using SpotifyAPI.Web;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -17,18 +17,20 @@ namespace DataCollectorSpotify
 {
     public class Program
     {
+        public static DataCollectorSpotifyOptions options;
+
         public static int Main(string[] args)
         {
 
             var host = CreateHostBuilder(args).Build();
 
             Collector collector = host.Services.GetService<Collector>();
-            DataCollectorSpotifyOptions options = host.Services.GetService<DataCollectorSpotifyOptions>();
+            options = host.Services.GetService<DataCollectorSpotifyOptions>();
             host.Start();
 
             Uri loginRequestUri = collector.GetLoginRequestUri(options.SpotifyAuthCallbackUri);
 
-            System.Diagnostics.Process.Start(options.BrowserPath, loginRequestUri + " --new-window");
+            Process.Start(options.BrowserPath, loginRequestUri + " --new-window");
 
             return 0;
         }
@@ -62,15 +64,43 @@ namespace DataCollectorSpotify
 
         private static async Task<List<M3uPlaylist>> GetUserPlaylists(SpotifyClient spotify)
         {
-            var currentUser = await spotify.UserProfile.Current();
-            var userPlaylists = await spotify.Playlists.GetUsers(currentUser.Id);
+            List<M3uPlaylist> allUserPlaylists = new List<M3uPlaylist>();
 
+            var currentUser = await spotify.UserProfile.Current();
+            var userPlaylistPage = await spotify.Playlists.GetUsers(currentUser.Id);
+
+            Stopwatch timeSinceLastRequest = new Stopwatch();
+
+            while(!string.IsNullOrEmpty(userPlaylistPage.Next)) //(allUserPlaylists.Count < userPlaylistPage.Total)
+            {
+                timeSinceLastRequest.Start();
+                allUserPlaylists.AddRange(await GetUserPlaylistPage(userPlaylistPage, spotify));
+
+                if (timeSinceLastRequest.ElapsedMilliseconds < options.MillisecondDelayBetweenRequests)
+                {
+                    await Task.Delay((int)(options.MillisecondDelayBetweenRequests - timeSinceLastRequest.ElapsedMilliseconds));
+                }
+                timeSinceLastRequest.Restart();
+
+                userPlaylistPage = await spotify.NextPage(userPlaylistPage);
+
+                if(allUserPlaylists.Count == userPlaylistPage.Total)
+                {
+                    break;
+                }
+            }
+
+            return allUserPlaylists;
+        }
+
+        private static async Task<List<M3uPlaylist>> GetUserPlaylistPage(Paging<SimplePlaylist> userPlaylists, SpotifyClient spotify)
+        {
             List<FullPlaylist> userFullPlaylists = new List<FullPlaylist>(userPlaylists.Items.Count);
 
             foreach (var item in userPlaylists.Items)
             {
                 userFullPlaylists.Add(await spotify.Playlists.Get(item.Id));
-                await Task.Delay(500);
+                await Task.Delay(options.MillisecondDelayBetweenRequests);
             }
 
             List<M3uPlaylist> playlists = new List<M3uPlaylist>(userPlaylists.Items.Count);

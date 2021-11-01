@@ -11,5 +11,6 @@ namespace DataCollectorSpotify
         public Uri SpotifyAuthCallbackUri { get; set; }
         public string SpotifyDataCollectorClientId { get; set; }
         public string BrowserPath { get; set; }
+        public int MillisecondDelayBetweenRequests { get; set; }
     }
 }
