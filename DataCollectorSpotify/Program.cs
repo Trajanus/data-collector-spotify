@@ -49,7 +49,7 @@ namespace DataCollectorSpotify
             foreach (var playlist in playlists)
             {
                 string playlistFileName = Path.GetInvalidFileNameChars().Aggregate(playlist.FileName, (current, c) => current.Replace(c.ToString(), string.Empty)); 
-                string filePath = Path.Combine(directoryPath, playlistFileName);
+                string filePath = Path.Combine(directoryPath, $"{playlistFileName}.json");
                 File.WriteAllText(filePath, JsonConvert.SerializeObject(playlist));
             }
         }
@@ -71,7 +71,7 @@ namespace DataCollectorSpotify
 
             Stopwatch timeSinceLastRequest = new Stopwatch();
 
-            while(!string.IsNullOrEmpty(userPlaylistPage.Next)) //(allUserPlaylists.Count < userPlaylistPage.Total)
+            while(!string.IsNullOrEmpty(userPlaylistPage.Next))
             {
                 timeSinceLastRequest.Start();
                 allUserPlaylists.AddRange(await GetUserPlaylistPage(userPlaylistPage, spotify));
