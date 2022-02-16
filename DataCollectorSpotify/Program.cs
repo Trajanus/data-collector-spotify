@@ -5,6 +5,7 @@ using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
 using PlaylistLibrary;
 using PlaylistsNET.Models;
+using Serilog;
 using SpotifyAPI.Web;
 using System;
 using System.Collections.Generic;
@@ -18,6 +19,7 @@ namespace DataCollectorSpotify
     public class Program
     {
         public static DataCollectorSpotifyOptions options;
+        private static readonly ILogger log = Log.ForContext<Program>();
 
         public static int Main(string[] args)
         {
@@ -51,6 +53,7 @@ namespace DataCollectorSpotify
                 string playlistFileName = Path.GetInvalidFileNameChars().Aggregate(playlist.FileName, (current, c) => current.Replace(c.ToString(), string.Empty)); 
                 string filePath = Path.Combine(directoryPath, $"{playlistFileName}.json");
                 File.WriteAllText(filePath, JsonConvert.SerializeObject(playlist));
+                log.Information($"Wrote playlist {playlistFileName} to {filePath}");
             }
         }
 
@@ -90,6 +93,7 @@ namespace DataCollectorSpotify
                 }
             }
 
+            log.Information($"Retrieved {allUserPlaylists.Count} user playlists.");
             return allUserPlaylists;
         }
 
