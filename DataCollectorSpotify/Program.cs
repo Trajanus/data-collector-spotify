@@ -12,14 +12,24 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace DataCollectorSpotify
 {
+
+    public class PlaylistPath
+    {
+        public string playlistPath;
+    }
+
     public class Program
     {
         public static DataCollectorSpotifyOptions options;
         private static readonly ILogger log = Log.ForContext<Program>();
+        private static readonly HttpClient client = new HttpClient();
 
         public static int Main(string[] args)
         {
@@ -48,12 +58,31 @@ namespace DataCollectorSpotify
                 Directory.CreateDirectory(directoryPath);
             }
 
+            List<PlaylistPath> playlistPaths = new List<PlaylistPath>();
             foreach (var playlist in playlists)
             {
                 string playlistFileName = Path.GetInvalidFileNameChars().Aggregate(playlist.FileName, (current, c) => current.Replace(c.ToString(), string.Empty)); 
                 string filePath = Path.Combine(directoryPath, $"{playlistFileName}.json");
+                playlistPaths.Add(new PlaylistPath { playlistPath = filePath });
                 File.WriteAllText(filePath, JsonConvert.SerializeObject(playlist));
                 log.Information($"Wrote playlist {playlistFileName} to {filePath}");
+            }
+
+            foreach(var playlistPath in playlistPaths)
+            {
+                try
+                {
+                    string playlistPathJson = JsonConvert.SerializeObject(playlistPath);
+                    var content = new StringContent(playlistPathJson, Encoding.UTF8, "application/json");
+                    HttpResponseMessage response = await client.PostAsync(options.PlaylistOutputUri, content);
+                    response.EnsureSuccessStatusCode();
+                    log.Information($"Sent playlist path {playlistPath.playlistPath} to output uri.");
+                    break;
+                }
+                catch (HttpRequestException ex)
+                {
+                    log.Error(ex.Message);
+                }
             }
         }
 
@@ -127,7 +156,7 @@ namespace DataCollectorSpotify
 
                 playlists.Add(playlist);
             }
-
+            log.Information($"Retrieved user playlist page.");
             return playlists;
         }
     }
