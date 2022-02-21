@@ -19,12 +19,6 @@ using System.Threading.Tasks;
 
 namespace DataCollectorSpotify
 {
-
-    public class PlaylistPath
-    {
-        public string playlistPath;
-    }
-
     public class Program
     {
         public static DataCollectorSpotifyOptions options;
@@ -58,25 +52,25 @@ namespace DataCollectorSpotify
                 Directory.CreateDirectory(directoryPath);
             }
 
-            List<PlaylistPath> playlistPaths = new List<PlaylistPath>();
+            List<string> serializedPlaylists = new List<string>();
             foreach (var playlist in playlists)
             {
                 string playlistFileName = Path.GetInvalidFileNameChars().Aggregate(playlist.FileName, (current, c) => current.Replace(c.ToString(), string.Empty)); 
                 string filePath = Path.Combine(directoryPath, $"{playlistFileName}.json");
-                playlistPaths.Add(new PlaylistPath { playlistPath = filePath });
-                File.WriteAllText(filePath, JsonConvert.SerializeObject(playlist));
+                string serializedPlaylist = JsonConvert.SerializeObject(playlist);
+                serializedPlaylists.Add(serializedPlaylist);
+                File.WriteAllText(filePath, serializedPlaylist);
                 log.Information($"Wrote playlist {playlistFileName} to {filePath}");
             }
 
-            foreach(var playlistPath in playlistPaths)
+            foreach(var playlistJson in serializedPlaylists)
             {
                 try
                 {
-                    string playlistPathJson = JsonConvert.SerializeObject(playlistPath);
-                    var content = new StringContent(playlistPathJson, Encoding.UTF8, "application/json");
+                    var content = new StringContent(playlistJson, Encoding.UTF8, "application/json");
                     HttpResponseMessage response = await client.PostAsync(options.PlaylistOutputUri, content);
                     response.EnsureSuccessStatusCode();
-                    log.Information($"Sent playlist path {playlistPath.playlistPath} to output uri.");
+                    log.Debug($"Sent playlist {playlistJson} to output uri.");
                     break;
                 }
                 catch (HttpRequestException ex)
